@@ -40,7 +40,7 @@ make dev                      # http://localhost:8000
 | **Redis** | 7+ | Cache, rate limits, Celery broker and results |
 | **S3-compatible storage** | — | Product images, invoice PDFs, import files. Cloudflare R2 or AWS S3 |
 | **Resend** | — | Transactional email |
-| **Paystack** | — | Payments. Flutterwave sits behind the same adapter interface |
+| **Paystack / Flutterwave** | — | Payments. Several gateways run side by side, each with its own sandbox and live credentials, priority failover and routing rules — see `schema.sql` §14 |
 | **Sentry** | — | Errors and tracing |
 | **PgBouncer** | — | Connection pooling in production (transaction mode) |
 
