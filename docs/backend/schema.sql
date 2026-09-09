@@ -1426,3 +1426,90 @@ create index idx_si_unpaid on supplier_invoice (due_date)
 alter table category add column min_shelf_life_days smallint not null default 0;
 
 commit;
+
+-- ============================================================================
+-- 14. PAYMENT GATEWAY REGISTRY
+--     Supersedes the single `payment.active_gateway` setting.
+--     See drive2retail-admin/docs/08-payments-gateways.md §4.
+-- ============================================================================
+
+begin;
+
+create table payment_gateway (
+  id                    bigserial primary key,
+  public_id             uuid not null default gen_random_uuid(),
+  code                  varchar(30) not null unique,
+  name                  varchar(100) not null,
+  provider              varchar(30) not null,
+  is_enabled            boolean not null default false,
+  mode                  varchar(10) not null default 'sandbox',
+  priority              smallint not null default 0,
+  -- Secrets live in the secret manager; only the reference is stored here.
+  sandbox_public_key    varchar(200),
+  sandbox_secret_ref    varchar(120),
+  live_public_key       varchar(200),
+  live_secret_ref       varchar(120),
+  webhook_secret_ref    varchar(120),
+  supported_channels    varchar(24)[] not null default '{}',
+  supported_currencies  char(3)[] not null default '{NGN}',
+  min_amount            numeric(14,2),
+  max_amount            numeric(14,2),
+  fee_percent           numeric(5,3),
+  fee_flat              numeric(14,2),
+  fee_cap               numeric(14,2),
+  supports_refunds      boolean not null default true,
+  supports_partial_refunds boolean not null default true,
+  settlement_days       smallint,
+  last_health_check_at  timestamptz,
+  last_health_ok        boolean,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
+  constraint ck_gateway_mode  check (mode in ('sandbox', 'live')),
+  constraint ck_gateway_range check (max_amount is null or min_amount is null
+                                     or max_amount > min_amount)
+);
+create index idx_gateway_enabled on payment_gateway (priority) where is_enabled;
+
+create table payment_routing_rule (
+  id          bigserial primary key,
+  sequence    smallint not null,
+  name        varchar(150) not null,
+  -- [{"field": "zone", "op": "in", "value": ["LAG-IKD"]}]
+  conditions  jsonb not null default '[]'::jsonb,
+  gateway_id  bigint not null references payment_gateway(id) on delete restrict,
+  is_default  boolean not null default false,
+  is_active   boolean not null default true,
+  created_at  timestamptz not null default now(),
+  constraint uq_routing_sequence unique (sequence)
+);
+-- Exactly one catch-all rule.
+create unique index uq_routing_default on payment_routing_rule (is_default) where is_default;
+create index idx_routing_eval on payment_routing_rule (sequence) where is_active;
+
+-- Test and live money must never be reconciled together.
+alter table payment_attempt
+  add column gateway_id bigint references payment_gateway(id) on delete set null,
+  add column mode varchar(10) not null default 'live',
+  add column failover_from_id bigint references payment_attempt(id) on delete set null;
+
+alter table payment_attempt
+  add constraint ck_pay_mode check (mode in ('sandbox', 'live'));
+
+create index idx_pay_gateway on payment_attempt (gateway_id, created_at desc);
+create index idx_pay_mode on payment_attempt (mode, status);
+
+commit;
+
+begin;
+
+insert into payment_gateway
+  (code, name, provider, is_enabled, mode, priority, supported_channels, settlement_days)
+values
+  ('paystack', 'Paystack', 'paystack', false, 'sandbox', 1,
+   '{card,bank,ussd,transfer}', 2),
+  ('flutterwave', 'Flutterwave', 'flutterwave', false, 'sandbox', 2,
+   '{card,bank,ussd}', 2),
+  ('cod', 'Cash on delivery', 'cash_on_delivery', false, 'live', 3,
+   '{cash}', 0);
+
+commit;

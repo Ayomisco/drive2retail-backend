@@ -324,7 +324,7 @@ dispatched **after commit** via `transaction.on_commit`.
 
 The remaining documents specify, without hand-waving:
 
-- **65 tables** with every column, type, nullability, default, index and constraint
+- **67 tables** with every column, type, nullability, default, index and constraint
 - The **order state machine** and every legal transition
 - The **stock reservation policy** — the single most important correctness decision
 - **Idempotency** for webhooks and for client retries

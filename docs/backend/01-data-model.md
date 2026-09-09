@@ -1,6 +1,6 @@
 # Data Model
 
-PostgreSQL 16. 65 tables across 14 domains.
+PostgreSQL 16. 67 tables across 14 domains.
 
 **Conventions used throughout**
 
@@ -1201,7 +1201,12 @@ Runtime configuration so staff change behaviour without a deploy (PRD FR-03 spir
 | `is_public` | boolean not null default false |
 | `updated_by_id` | FK → user null |
 
-Seeded keys: `payment.active_gateway`, `checkout.reservation_ttl_minutes`,
+> **Superseded for payments.** A single `payment.active_gateway` string cannot
+> express multiple live gateways, per-gateway sandbox/live modes, or routing.
+> Gateways now live in `payment_gateway` and `payment_routing_rule` — see
+> `schema.sql` §14 and `drive2retail-admin/docs/08-payments-gateways.md`.
+
+Seeded keys: `payment.active_gateway` *(deprecated)*, `checkout.reservation_ttl_minutes`,
 `accounts.require_approval`, `accounts.hide_prices_until_approved`,
 `orders.allow_cancel_before`, `delivery.free_above`, `tax.default_class`,
 `restricted.require_acknowledgement`.
@@ -1224,4 +1229,4 @@ Seeded keys: `payment.active_gateway`, `checkout.reservation_ttl_minutes`,
 | Search | `search_query_log`, `banner` |
 | Ops | `audit_log`, `import_job`, `idempotency_key`, `setting` |
 
-**65 tables.** Executable DDL in `schema.sql`.
+**67 tables.** Executable DDL in `schema.sql`.
