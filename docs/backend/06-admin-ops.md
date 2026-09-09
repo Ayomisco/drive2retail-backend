@@ -12,7 +12,7 @@ day; customers pass through the storefront in minutes. **This is the product.**
 | Purpose | Data management | Operational workflow |
 | Users | Catalogue, finance, superuser | Ops, inventory, support, sales |
 | Built | Configuration, days | React, weeks |
-| Covers | CRUD on all 67 tables, search, filters, bulk actions, history | Dashboard, fulfilment board, stock console, reconciliation, imports |
+| Covers | CRUD on all 69 tables, search, filters, bulk actions, history | Dashboard, fulfilment board, stock console, reconciliation, imports |
 
 Django Admin is not a placeholder to be replaced later. It is the correct tool for
 "edit this product's tax class" and it will never be worth rebuilding. The custom UI

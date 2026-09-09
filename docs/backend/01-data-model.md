@@ -1,6 +1,6 @@
 # Data Model
 
-PostgreSQL 16. 67 tables across 14 domains.
+PostgreSQL 16. 69 tables across 14 domains.
 
 **Conventions used throughout**
 
@@ -1229,4 +1229,4 @@ Seeded keys: `payment.active_gateway` *(deprecated)*, `checkout.reservation_ttl_
 | Search | `search_query_log`, `banner` |
 | Ops | `audit_log`, `import_job`, `idempotency_key`, `setting` |
 
-**67 tables.** Executable DDL in `schema.sql`.
+**69 tables.** Executable DDL in `schema.sql`.

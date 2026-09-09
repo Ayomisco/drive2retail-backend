@@ -1513,3 +1513,53 @@ values
    '{cash}', 0);
 
 commit;
+
+-- ============================================================================
+-- 15. DISPATCH PARTNERS  (modelled at launch, unused until needed)
+--     D2R expects to use its own riders. A nullable partner_id means adopting
+--     an outside dispatch company later is a data change and an auth scope,
+--     not a migration of every rider and trip.
+--     See drive2retail-admin/docs/07-dispatch.md §7.
+-- ============================================================================
+
+begin;
+
+create table dispatch_partner (
+  id                  bigserial primary key,
+  public_id           uuid not null default gen_random_uuid(),
+  code                varchar(20) not null unique,
+  name                varchar(200) not null,
+  contact_name        varchar(150),
+  contact_email       citext,
+  contact_phone       varchar(32),
+  address             text,
+  -- Settlement: what D2R pays the partner
+  rate_type           varchar(16) not null default 'per_drop',
+  rate_amount         numeric(14,2),
+  payment_terms_days  smallint,
+  -- Partners may collect cash on D2R's behalf and remit it
+  handles_cod         boolean not null default false,
+  cod_remittance_days smallint,
+  is_active           boolean not null default true,
+  notes               text,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  constraint ck_partner_rate check (rate_type in ('per_drop', 'per_trip', 'percent', 'monthly'))
+);
+
+create table dispatch_partner_zone (
+  id         bigserial primary key,
+  partner_id bigint not null references dispatch_partner(id) on delete cascade,
+  zone_id    bigint not null references delivery_zone(id) on delete cascade,
+  is_primary boolean not null default false,
+  constraint uq_partner_zone unique (partner_id, zone_id)
+);
+
+-- null partner_id means own fleet, which is the launch configuration
+alter table driver add column partner_id bigint references dispatch_partner(id) on delete restrict;
+alter table trip   add column partner_id bigint references dispatch_partner(id) on delete restrict;
+
+create index idx_driver_partner on driver (partner_id) where partner_id is not null;
+create index idx_trip_partner   on trip (partner_id, scheduled_date desc) where partner_id is not null;
+
+commit;

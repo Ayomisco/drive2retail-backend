@@ -17,7 +17,7 @@ of this repository, the client PRD and the company pitch deck.
 | 7 | [07-delivery-plan.md](07-delivery-plan.md) | Milestones, testing, handover, cost drivers |
 | 8 | [08-dispatch-delivery.md](08-dispatch-delivery.md) | Fleet, routes, trips, proof of delivery, cash on delivery |
 | 9 | [09-procurement-batches.md](09-procurement-batches.md) | Purchase orders, goods receipt, batch/expiry tracking, FEFO |
-| — | [schema.sql](schema.sql) | Executable Postgres DDL, 67 tables |
+| — | [schema.sql](schema.sql) | Executable Postgres DDL, 69 tables |
 
 ## The short version
 
