@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+env:
+  DJANGO_SETTINGS_MODULE: config.settings.test
+  DJANGO_SECRET_KEY: ci-secret-not-used-in-production
+  DATABASE_URL: postgres://d2r:d2r@localhost:5432/d2r_test
+  REDIS_URL: redis://localhost:6379/0
+  CELERY_BROKER_URL: redis://localhost:6379/1
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv venv --python 3.12
+      - run: uv pip install -e . && uv pip install --group dev
+      - name: Lint
+        run: .venv/bin/ruff check .
+      - name: Format check
+        run: .venv/bin/ruff format --check .
+      - name: Type check
+        run: .venv/bin/mypy d2r config
+      - name: Dependency audit
+        run: .venv/bin/pip-audit --ignore-vuln GHSA-none || true
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: d2r_test
+          POSTGRES_USER: d2r
+          POSTGRES_PASSWORD: d2r
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv venv --python 3.12
+      - run: uv pip install -e . && uv pip install --group dev
+      - name: Check for missing migrations
+        run: .venv/bin/python manage.py makemigrations --check --dry-run
+      - name: Migrate
+        run: .venv/bin/python manage.py migrate
+      - name: Test
+        run: .venv/bin/pytest --cov --cov-report=xml -n auto
+      - name: Validate OpenAPI schema
+        run: .venv/bin/python manage.py spectacular --file /dev/null --validate --fail-on-warn
+      - uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: coverage.xml

@@ -1,0 +1,113 @@
+[project]
+name = "d2r-backend"
+version = "0.1.0"
+description = "Drive 2 Retail — wholesale e-commerce API"
+requires-python = ">=3.12,<3.14"
+
+dependencies = [
+    # Core
+    "Django>=5.1,<5.3",
+    "djangorestframework>=3.15",
+    "django-environ>=0.11",
+    "psycopg[binary,pool]>=3.2",
+
+    # API
+    "drf-spectacular[sidecar]>=0.28",
+    "django-filter>=24.3",
+    "djangorestframework-simplejwt>=5.3",
+    "django-cors-headers>=4.6",
+
+    # Async & cache
+    "celery[redis]>=5.4",
+    "django-celery-beat>=2.7",
+    "django-celery-results>=2.5",
+    "redis>=5.2",
+    "django-redis>=5.4",
+
+    # Storage & media
+    "django-storages[s3]>=1.14",
+    "Pillow>=11.0",
+
+    # Security
+    "argon2-cffi>=23.1",
+    "django-axes>=7.0",
+    "nh3>=0.2",
+
+    # Integrations
+    "resend>=2.4",
+    "requests>=2.32",
+
+    # Documents & data
+    "weasyprint>=63.0",
+    "openpyxl>=3.1",
+
+    # Ops
+    "sentry-sdk[django,celery]>=2.19",
+    "structlog>=24.4",
+    "gunicorn>=23.0",
+    "whitenoise[brotli]>=6.8",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-cov>=6.0",
+    "pytest-xdist>=3.6",
+    "factory-boy>=3.3",
+    "faker>=33.0",
+    "responses>=0.25",
+    "freezegun>=1.5",
+    "nplusone>=1.0",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "django-stubs[compatible-mypy]>=5.1",
+    "djangorestframework-stubs>=3.15",
+    "django-extensions>=3.2",
+    "django-debug-toolbar>=4.4",
+    "pre-commit>=4.0",
+    "pip-audit>=2.7",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# An application, not a library: only the app packages ship.
+packages = ["d2r", "config"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "DJ", "S", "T20", "SIM", "RUF"]
+ignore = ["S101", "RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]
+"config/settings/*" = ["F403", "F405"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+exclude = ["migrations/"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.local"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+addopts = "--strict-markers --reuse-db -p no:randomly"
+markers = [
+    "concurrency: tests that exercise locking and race conditions",
+    "integration: tests that hit the database and full API stack",
+]
+
+[tool.coverage.run]
+source = ["d2r"]
+omit = ["*/migrations/*", "*/tests/*"]

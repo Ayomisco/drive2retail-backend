@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: d2r
+      POSTGRES_USER: d2r
+      POSTGRES_PASSWORD: d2r
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U d2r"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports: ["6379:6379"]
+    volumes: ["redisdata:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://d2r:d2r@db:5432/d2r
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes: [".:/app"]
+    ports: ["8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  # Split queues so payment work never waits behind a bulk import.
+  worker:
+    build: .
+    command: celery -A config worker -Q critical,default -l info --concurrency 4
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://d2r:d2r@db:5432/d2r
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes: [".:/app"]
+    depends_on: [db, redis]
+
+  worker-bulk:
+    build: .
+    command: celery -A config worker -Q bulk -l info --concurrency 2
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://d2r:d2r@db:5432/d2r
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes: [".:/app"]
+    depends_on: [db, redis]
+
+  beat:
+    build: .
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgres://d2r:d2r@db:5432/d2r
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes: [".:/app"]
+    depends_on: [db, redis]
+
+volumes:
+  pgdata:
+  redisdata:
